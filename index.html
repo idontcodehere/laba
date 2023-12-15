@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Posts</title>
+</head>
+<body>
+<h1>All Posts</h1>
+<ul id="postsList"></ul>
+
+<h2>Create Post</h2>
+<form id="createForm">
+    <label for="title">Title:</label>
+    <input type="text" id="title" name="title"><br><br>
+
+    <label for="description">Description:</label>
+    <textarea id="description" name="description"></textarea><br><br>
+
+    <label for="author">Author:</label>
+    <input type="text" id="author" name="author"><br><br>
+
+    <input type="submit" value="Create">
+</form>
+
+<script>
+
+    function deletePost(postId) {
+        fetch(`posts/${postId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                const postItem = document.getElementById(`post-${postId}`);
+                postItem.remove();
+                console.log('Post deleted');
+            } else {
+                console.error('Error:', response.statusText);
+            }
+        })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function editPost(postId) {
+        const postItem = document.getElementById(`post-${postId}`);
+
+        postItem.innerHTML = `
+        <form id="editForm">
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title"><br><br>
+
+            <label for="description">Description:</label>
+            <textarea id="description" name="description"></textarea><br><br>
+
+            <label for="author">Author:</label>
+            <input type="text" id="author" name="author"><br><br>
+
+            <input type="submit" value="Edit">
+        </form>`;
+
+        const editForm = document.getElementById('editForm');
+        console.log(postItem.data);
+
+        editForm.title.value = postItem.data.title;
+        editForm.description.value = postItem.data.description;
+        editForm.author.value = postItem.data.author;
+
+        console.log(editForm)
+
+        editForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const editPost = {
+                title: editForm.title.value,
+                description: editForm.description.value,
+                author: editForm.author.value
+            };
+            console.log(editPost);
+
+            fetch(`posts/${postItem.data.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(editPost)
+            })
+                .then(response => response.json())
+                .then(editPost => {
+                    // Add the newly created post to the UI
+                    postItem.innerHTML = `
+                            <strong>${editPost.title}</strong> by ${editPost.author}: ${editPost.description}
+                            <button onclick="editPost(${editPost.id})">Edit</button>
+                            <button onclick="deletePost(${editPost.id})">Delete</button>
+                        `;
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const postsList = document.getElementById('postsList');
+        const createForm = document.getElementById('createForm');
+
+        // Function to delete a post by ID
+        // Function to display posts
+        const displayPosts = (posts) => {
+            posts.forEach(post => {
+                const listItem = document.createElement('li');
+                listItem.id = `post-${post.id}`;
+                listItem.data = post;
+                listItem.innerHTML = `
+                            <strong data-title="${post.title}">${post.title}</strong> by ${post.author}: ${post.description}
+                            <button onclick="editPost(${post.id})">Edit</button>
+                            <button onclick="deletePost(${post.id})">Delete</button>
+                        `;
+                postsList.appendChild(listItem);
+            });
+        };
+
+        // Fetch all posts and display them
+        fetch('posts')
+            .then(response => response.json())
+            .then(posts => displayPosts(posts))
+            .catch(error => console.error('Error:', error));
+
+        // Event listener for form submission (create a new post)
+        createForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const newPost = {
+                title: createForm.title.value,
+                description: createForm.description.value,
+                author: createForm.author.value
+            };
+            console.log(newPost)
+
+            fetch('posts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newPost)
+            })
+                .then(response => response.json())
+                .then(newPost => {
+                    // Add the newly created post to the UI
+                    const listItem = document.createElement('li');
+                    listItem.id = `post-${newPost.id}`;
+                    listItem.innerHTML = `
+                            <strong>${newPost.title}</strong> by ${newPost.author}: ${newPost.description}
+                            <button onclick="editPost(${newPost.id})">Edit</button>
+                            <button onclick="deletePost(${newPost.id})">Delete</button>
+                        `;
+                    listItem.data = newPost;
+                    postsList.appendChild(listItem);
+
+                    // Clear the form after successful creation
+                    createForm.reset();
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    });
+</script>
+</body>
+</html>
